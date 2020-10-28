@@ -4,3 +4,5 @@ __dummy.html
 *.o
 *.obj
 kime-boi-advance
+.vscode/launch.json
+test.gba

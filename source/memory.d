@@ -1,7 +1,11 @@
-module mmu;
-import types;
+// GBA Does Not Have A MMU 
 
-class MMU
+module memory;
+import types;
+import std.stdio;
+import std.file;
+
+class Memory
 {
 
     //ram
@@ -39,27 +43,27 @@ class MMU
             return (bios[address + 3] << 24) | (bios[address + 2] << 16) | (
                     bios[address + 1] << 8) | bios[address];
         if (address >= 0x02000000 && address <= 0x0203FFFF)
-            return (wram2[address + 3] << 24) | (wram2[address + 2] << 16) | (
-                    wram2[address + 1] << 8) | wram2[address];
+            return (wram2[address - 0x02000000 + 3] << 24) | (wram2[address - 0x02000000 + 2] << 16) | (
+                    wram2[address - 0x02000000 + 1] << 8) | wram2[address - 0x02000000];
         if (address >= 0x03000000 && address <= 0x03007FFF)
-            return (wram1[address + 3] << 24) | (wram1[address + 2] << 16) | (
-                    wram1[address + 1] << 8) | wram1[address];
+            return (wram1[address - 0x03000000 + 3] << 24) | (wram1[address - 0x03000000 + 2] << 16) | (
+                    wram1[address - 0x03000000 + 1] << 8) | wram1[address - 0x03000000];
         if (address >= 0x04000000 && address <= 0x040003FE)
-            return (io[address + 3] << 24) | (io[address + 2] << 16) | (
-                    io[address + 1] << 8) | io[address];
+            return (io[address - 0x04000000 + 3] << 24) | (io[address - 0x04000000 + 2] << 16) | (
+                    io[address - 0x04000000 + 1] << 8) | io[address - 0x04000000];
 
         if (address >= 0x05000000 && address <= 0x050003FF)
-            return (obj_pallete[address + 3] << 24) | (obj_pallete[address + 2] << 16) | (
-                    obj_pallete[address + 1] << 8) | obj_pallete[address];
+            return (obj_pallete[address - 0x05000000 + 3] << 24) | (obj_pallete[address - 0x05000000 + 2] << 16) | (
+                    obj_pallete[address - 0x05000000 + 1] << 8) | obj_pallete[address - 0x05000000];
         if (address >= 0x06000000 && address <= 0x06017FFF)
-            return (vram[address + 3] << 24) | (vram[address + 2] << 16) | (
-                    vram[address + 1] << 8) | vram[address];
+            return (vram[address - 0x06000000 + 3] << 24) | (vram[address + 2] - 0x06000000 << 16) | (
+                    vram[address - 0x06000000 + 1] << 8) | vram[address - 0x06000000];
         if (address >= 0x07000000 && address <= 0x070003FF)
-            return (obj_attr[address + 3] << 24) | (obj_attr[address + 2] << 16) | (
-                    obj_attr[address + 1] << 8) | obj_attr[address];
+            return (obj_attr[address - 0x07000000 + 3] << 24) | (obj_attr[address - 0x07000000 + 2] << 16) | (
+                    obj_attr[address - 0x07000000 + 1] << 8) | obj_attr[address - 0x07000000];
 
-        //if(address >= 0x08000000 && address <= 0x09FFFFFF)   
-        //return (rom[address + 3] << 24) | (rom[address + 2] << 16) | (rom[address + 1] << 8) | rom[address];
+        if(address >= 0x08000000 && address <= 0x09FFFFFF)   
+            return (rom[address - 0x08000000 + 3] << 24) | (rom[address - 0x08000000  + 2] << 16) | (rom[address - 0x08000000 + 1] << 8) | rom[address - 0x08000000];
         /*
         if(address >= 0x0A000000 && address <= 0x0BFFFFFF)
             return rom[address];
@@ -81,9 +85,9 @@ class MMU
     uint8 read8(ulong address)
     {
         if (address <= 0x3FFF)
-            return bios[address]; //this is a UINT8 !!!!!!
+            return bios[address]; 
         if (address >= 0x02000000 && address <= 0x0203FFFF)
-            return wram2[address]; //this is a UINT8 !!!!!!
+            return wram2[address]; 
         if (address >= 0x03000000 && address <= 0x03007FFF)
             return wram1[address];
         if (address >= 0x04000000 && address <= 0x040003FE)
@@ -119,5 +123,11 @@ class MMU
     void write8(uint32 address, uint32 value)
     {
 
+    }
+
+    void read_game()
+    {
+        auto game = File("test.gba", "r");
+        rom = cast(uint8[]) game.rawRead(new char[1000000]);
     }
 }

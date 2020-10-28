@@ -1,10 +1,12 @@
 import std.stdio;
 import types;
-import mmu;
+import memory;
 
-MMU test;
+import cpu;
+
 void main()
 { 
     //test.srom[0] = cast(uint8)5;
-    write("hello");
+    CPU cpu = new CPU;
+    cpu.emulate_cycle();
 }
