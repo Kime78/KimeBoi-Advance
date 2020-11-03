@@ -5,23 +5,26 @@ import types;
 import std.stdio;
 import std.file;
 
+/++ Class that handles the memory of the GBA +/
 class Memory
 {
 
     //ram
-    uint8[] bios;
-    uint8[] wram2;
-    uint8[] wram1;
-    uint8[] io;
+    uint8[] bios; /++ bios RAM+/
+    uint8[] wram2; /++ Work RAM 2 +/
+    uint8[] wram1; /++ Work RAM 1 +/
+    uint8[] io; /++ Input/Output RAM +/
 
     //vram
-    uint8[] obj_pallete;
-    uint8[] vram;
-    uint8[] obj_attr;
+    uint8[] obj_pallete; /++ OBJ pallete VRAM +/
+    uint8[] vram; /++ VRAM +/
+    uint8[] obj_attr; /++ OBJ attributes +/
 
     //rom
-    uint8[] rom; 
-    uint8[] srom;
+    uint8[] rom; /++ ROM +/
+    uint8[] srom; /++ Special ROM +/
+
+    /++ Initialises the Memory +/
     this()
     {
         bios = new uint8[16_384];
@@ -37,6 +40,7 @@ class Memory
         srom = new uint8[65_536];
     }
 
+    /++ Reads a 32bit number from memory +/
     uint32 read32(uint32 address)
     {
         if (address <= 0x3FFF)
@@ -77,11 +81,13 @@ class Memory
 
     }
 
+    /++ Reads a 16bit number from memory +/
     uint16 read16(uint32 address)
     {
         return 0;
     }
 
+    /++ Reads a 8bit number from memory +/
     uint8 read8(ulong address)
     {
         if (address <= 0x3FFF)
@@ -110,24 +116,28 @@ class Memory
         return 0;
     }
 
+    /++ Writes a 32bit number to memory +/
     void write32(uint32 address, uint32 value)
     {
 
     }
 
+    /++ Writes a 16bit number to memory +/
     void write16(uint32 address, uint32 value)
     {
 
     }
 
+    /++ Writes a 8bit number to memory +/
     void write8(uint32 address, uint32 value)
     {
 
     }
 
+    /++ Reads the game from a file, stores it into ROM +/
     void read_game()
     {
         auto game = File("test.gba", "r");
-        rom = cast(uint8[]) game.rawRead(new char[1000000]);
+        rom = cast(uint8[]) game.rawRead(new char[1_000_000]);
     }
 }
