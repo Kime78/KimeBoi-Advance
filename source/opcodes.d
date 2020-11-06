@@ -15,11 +15,7 @@ class LUT
         for(int i = 0; i < 4096; i++)
         {
             arm_table[i] = toDelegate(&undefined_instruction);
-
-            if((i >> 9) == 0b0101)
-                arm_table[i] = toDelegate(&branch_handler);
-
-            
+       
             if(i <= 0x400)  
             {
                 arm_table[i] = toDelegate(&dataproc_handler);
@@ -29,6 +25,9 @@ class LUT
             {
                 arm_table[i] = toDelegate(&datatransfer_handler);
             }
+
+            if((i >> 9) == 0b0101)
+                arm_table[i] = toDelegate(&branch_handler);
                 
         }
     }

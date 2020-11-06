@@ -13,11 +13,64 @@ class CPU
     uint32 sp; /++ stack pointer of the CPU +/
     uint32 lr; /++ link register +/
     uint32 pc; /++ program counter +/
-    uint32 cpsr; /++ current program status register +/
+    uint32 cpsr = 0x1F; /++ current program status register +/
     Memory mem; /++ memory of the GBA +/
     File output; /++ outputs of the cpu +/
     LUT lut; /++ Look Up Table+/
     
+
+    /++ Modifies The Zero conditonal flag +/
+    void flag_zero(bool bit) 
+    {
+        if(bit)
+        {
+            cpsr |= 1UL << 30;
+        }
+        else
+        {
+            cpsr &= ~(1UL << 30);
+        }
+    }
+
+    /++ Modifies The Signed Overflow flag +/
+    void flag_signed(bool bit)
+    {
+        if(bit)
+        {
+            cpsr |= 1UL << 31;
+        }
+        else
+        {
+            cpsr &= ~(1UL << 31);
+        }
+    } 
+
+    /++ Modifies The Overflow flag +/
+    void flag_overflow(bool bit)
+    {
+        if(bit)
+        {
+            cpsr |= 1UL << 28;
+        }
+        else
+        {
+            cpsr &= ~(1UL << 28);
+        }
+    }
+
+    /++ Modifies The Carry flag +/
+    void flag_carry(bool bit) 
+    {
+        if(bit)
+        {
+            cpsr |= 1UL << 29;
+        }
+        else
+        {
+            cpsr &= ~(1UL << 29);
+        }
+    }
+
     /++ Initialises the CPU  +/
     this()
     {
@@ -34,7 +87,7 @@ class CPU
     {
         uint32 opcode = get_arm_opcode(mem.read32(pc));
         output.writeln("");
-        output.write("PC = "); output.writeln(format("%X", pc - 0x8000000));
+        output.write("PC = "); output.writeln(format("%X", pc));
         output.write("Instruction: "); output.writeln(format("%X", opcode));
 
         lut.arm_table[opcode](this);
@@ -46,6 +99,8 @@ class CPU
             output.write(format("%X",regs[i]));
             output.write(" ");
         }
+        output.write("CPRS: ");
+        output.write(format("%X", cpsr));
         output.writeln("");
         return 0;
     }

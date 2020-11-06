@@ -19,26 +19,22 @@ void undefined_instruction(CPU cpu) // I need to define structions in instructio
 void branch_handler(CPU cpu)
 {
     uint32 debugg = cpu.mem.read32(cpu.pc);
+    bool opcode = (debugg >> 24) & 1;
+    cpu.output.write(format("%X", cpu.mem.read32(cpu.pc)));
     cpu.output.write("b ");
+    
     debugg &= 0xffffff;
-    cpu.output.write(debugg);
-    cpu.output.writeln("");
+    
 
     cpu.pc += (debugg << 2);
     cpu.pc += 8;
-}
-
-/++ Handler for the Branch opcode +/
-void branch_handler(CPU cpu)
-{
-    uint32 debugg = cpu.mem.read32(cpu.pc);
-    cpu.output.write("b ");
-    debugg &= 0xffffff;
-    cpu.output.write(debugg);
+    if(opcode)
+    {
+        cpu.output.write("blt ");
+        cpu.lr = cpu.pc + 4;
+    }
+    cpu.output.write(format("%X", debugg));
     cpu.output.writeln("");
-
-    cpu.pc += (debugg << 2);
-    cpu.pc += 8;
 }
 
 /++ Handler for the Data Proc opcode +/
@@ -56,10 +52,12 @@ void dataproc_handler(CPU cpu)
             //writeln(mem.read32(pc));
             cpu.output.write("add r");
             //uint16 operand = opcode & 0b111_1111_1111;
-            uint8 dest_reg = (opcode & (0b1111 << 12)) >> 12;
+            uint8 dest_reg = (opcode >> 12) & 0b1111;
             cpu.output.write(dest_reg);
             
-            uint8 operand1 = (opcode >> 19) & 0b1111;
+            uint8 operand1 = (opcode >> 16) & 0b1111;
+            cpu.output.write(" r");
+            cpu.output.write(operand1);
             const bool immediate_mode = (opcode >> 25) & 1;
             if(immediate_mode)
             {
@@ -121,6 +119,109 @@ void dataproc_handler(CPU cpu)
             cpu.pc += 4;
             break;
         }
+
+        case 0xA:
+        {
+            import arithmetics;
+            
+            //writeln(mem.read32(pc));
+            cpu.output.write("cmpr r");
+            //uint16 operand = opcode & 0b111_1111_1111;
+            uint8 dest_reg = (opcode >> 12) & 0b1111;
+            cpu.output.write(dest_reg);
+    
+            uint8 operand1 = (opcode >> 16) & 0b1111;
+            cpu.output.write(" r");
+            cpu.output.write(operand1);
+            const bool immediate_mode = (opcode >> 25) & 1;
+            if(immediate_mode)
+            {
+                uint8 immediate = opcode & 0b1111_1111;
+                uint8 steps = (opcode >> 8) & 0b1111;
+
+                uint32 aux = cpu.regs[dest_reg] - operand1 + ror(immediate, steps * 2);
+                //set flags here UwU
+                cpu.flag_zero(aux == 0);
+                cpu.flag_overflow(cpu.regs[dest_reg] - operand1 + ror(immediate, steps * 2) > 0);
+                cpu.flag_signed(aux >> 31);
+                cpu.flag_carry(cpu.regs[dest_reg] - operand1 + ror(immediate, steps * 2) > 0x80000000);
+
+                cpu.output.write(' ');
+                cpu.output.writeln(format("%X", operand1 + ror(immediate, steps * 2)));
+            }
+            else
+            {
+                const uint8 shift_type = (opcode >> 4) & 0b11;
+                uint8 shift_amount;
+                if(((opcode >> 4) & 1) == 1)
+                {
+                    uint8 id = ((opcode >> 8) & 0b1111);
+                    //shift_amount = regs[id];
+                }
+                else
+                {
+                    shift_amount = (opcode >> 7) & 0b1_1111;
+                }
+                const uint8 operand2 = opcode & 0b1111;
+                switch (shift_type)
+                {
+                    case 0: //lsl
+                    {
+                        cpu.output.write(" lsl ");
+                        cpu.output.write(format("%X", shift_amount));
+                        cpu.output.write(" ");
+
+                        uint32 aux = cpu.regs[dest_reg] - operand2 << shift_amount;
+                        //set flags UwU
+                        cpu.flag_zero(aux == 0);
+                        cpu.flag_overflow(cpu.regs[dest_reg] - operand2 << shift_amount > 0);
+                        cpu.flag_signed(aux >> 31);
+                        cpu.flag_carry(cpu.regs[dest_reg] - operand2 << shift_amount > 0x80000000);
+
+
+                        break;
+                    }
+                    case 1: //lsr
+                    {
+                        cpu.output.write("lsr");
+
+                        uint32 aux = cpu.regs[dest_reg] - operand2 >> shift_amount;
+                        //set flags UwU
+                        cpu.flag_zero(aux == 0);
+                        cpu.flag_overflow(cpu.regs[dest_reg] - operand2 >> shift_amount > 0);
+                        cpu.flag_signed(aux >> 31);
+                        cpu.flag_carry(cpu.regs[dest_reg] - operand2 >> shift_amount > 0x80000000);
+                        break;
+                    }
+                    case 2: //asr
+                    {
+                        cpu.output.write("asr");
+                        break;
+                    }
+                    case 3: //ror
+                    {
+                        cpu.output.write("ror");
+
+                        uint32 aux = cpu.regs[dest_reg] - ror(operand2, shift_amount);
+                        //set flags UwU
+                        cpu.flag_zero(aux == 0);
+                        cpu.flag_overflow(cpu.regs[dest_reg] - ror(operand2, shift_amount) > 0);
+                        cpu.flag_signed(aux >> 31);
+                        cpu.flag_carry(cpu.regs[dest_reg] - ror(operand2, shift_amount) > 0x80000000);
+                        break;
+                    }
+                    default:
+                    {
+                        //crash
+                        cpu.output.write("ita");
+                        break;
+                    }
+                }
+            }
+            cpu.pc += 4;
+            break;
+        }
+
         case 0xD: 
         {
             import arithmetics;
