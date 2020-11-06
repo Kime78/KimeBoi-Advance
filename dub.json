@@ -1,3 +1,6 @@
 {
+	"dependencies": {
+		"bindbc-sdl": "~>0.19.2"
+	},
 	"name": "kime-boi-advance"
 }

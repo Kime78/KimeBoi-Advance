@@ -6,7 +6,6 @@ import cpu;
 
 void main()
 { 
-    //test.srom[0] = cast(uint8)5;
     CPU cpu = new CPU;
     while(true)
     {
