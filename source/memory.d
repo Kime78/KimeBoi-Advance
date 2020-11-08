@@ -67,7 +67,8 @@ class Memory
                     obj_attr[address - 0x07000000 + 1] << 8) | obj_attr[address - 0x07000000];
 
         if(address >= 0x08000000 && address <= 0x09FFFFFF)   
-            return (rom[address - 0x08000000 + 3] << 24) | (rom[address - 0x08000000  + 2] << 16) | (rom[address - 0x08000000 + 1] << 8) | rom[address - 0x08000000];
+            return (rom[address - 0x08000000 + 3] << 24) | (rom[address - 0x08000000  + 2] << 16) 
+            | (rom[address - 0x08000000 + 1] << 8) | rom[address - 0x08000000];
         /*
         if(address >= 0x0A000000 && address <= 0x0BFFFFFF)
             return rom[address];
@@ -84,6 +85,25 @@ class Memory
     /++ Reads a 16bit number from memory +/
     uint16 read16(uint32 address)
     {
+        if (address <= 0x3FFF)
+            return (bios[address + 1] << 8) | bios[address];
+        if (address >= 0x02000000 && address <= 0x0203FFFF)
+            return (wram2[address - 0x02000000 + 1] << 8) | wram2[address - 0x02000000];
+        if (address >= 0x03000000 && address <= 0x03007FFF)
+            return (wram1[address - 0x03000000 + 1] << 8) | wram1[address - 0x03000000];
+        if (address >= 0x04000000 && address <= 0x040003FE)
+            return (io[address - 0x04000000 + 1] << 8) | io[address - 0x04000000];
+
+        if (address >= 0x05000000 && address <= 0x050003FF)
+            return (obj_pallete[address - 0x05000000 + 1] << 8) | obj_pallete[address - 0x05000000];
+        if (address >= 0x06000000 && address <= 0x06017FFF)
+            return (vram[address - 0x06000000 + 1] << 8) | vram[address - 0x06000000];
+        if (address >= 0x07000000 && address <= 0x070003FF)
+            return (obj_attr[address - 0x07000000 + 1] << 8) | obj_attr[address - 0x07000000];
+
+        if(address >= 0x08000000 && address <= 0x09FFFFFF)   
+            return (rom[address - 0x08000000 + 1] << 8) | rom[address - 0x08000000];
+        
         return 0;
     }
 
@@ -93,18 +113,18 @@ class Memory
         if (address <= 0x3FFF)
             return bios[address]; 
         if (address >= 0x02000000 && address <= 0x0203FFFF)
-            return wram2[address]; 
+            return wram2[address - 0x02000000]; 
         if (address >= 0x03000000 && address <= 0x03007FFF)
-            return wram1[address];
+            return wram1[address - 0x03000000];
         if (address >= 0x04000000 && address <= 0x040003FE)
-            return io[address];
+            return io[address - 0x04000000];
 
         if (address >= 0x05000000 && address <= 0x050003FF)
-            return obj_pallete[address];
+            return obj_pallete[address - 0x05000000];
         if (address >= 0x06000000 && address <= 0x06017FFF)
-            return vram[address];
+            return vram[address - 0x06000000];
         if (address >= 0x07000000 && address <= 0x070003FF)
-            return obj_attr[address];
+            return obj_attr[address - 0x07000000];
 
         // if(address >= 0x08000000 && address <= 0x09FFFFFF)   
         // return rom[address];
@@ -119,7 +139,68 @@ class Memory
     /++ Writes a 32bit number to memory +/
     void write32(uint32 address, uint32 value)
     {
+        uint8 nibble1, nibble2, nibble3, nibble4;
+        nibble4 = value >> 24;
+        nibble3 = (value >> 16) & 0b1111_1111;
+        nibble2 = (value >> 8) & 0b1111_1111;
+        nibble1 = value & 0b1111_1111;
 
+        if (address <= 0x3FFF)
+        {
+            bios[address + 3] = nibble4;
+            bios[address + 2] = nibble3;
+            bios[address + 1] = nibble2;
+            bios[address] = nibble1; 
+        }
+            
+        if (address >= 0x02000000 && address <= 0x0203FFFF)
+        {
+            wram2[address - 0x02000000 + 3] = nibble4;
+            wram2[address - 0x02000000 + 2] = nibble3;
+            wram2[address - 0x02000000 + 1] = nibble2;
+            wram2[address - 0x02000000] = nibble1; 
+        }
+        if (address >= 0x03000000 && address <= 0x03007FFF)
+        {
+            wram1[address - 0x03000000 + 3] = nibble4;
+            wram1[address - 0x03000000 + 2] = nibble3;
+            wram1[address - 0x03000000 + 1] = nibble2;
+            wram1[address - 0x03000000] = nibble1; 
+        }
+        if (address >= 0x04000000 && address <= 0x040003FE)
+        {
+            io[address - 0x04000000 + 3] = nibble4;
+            io[address - 0x04000000 + 2] = nibble3;
+            io[address - 0x04000000 + 1] = nibble2;
+            io[address - 0x04000000] = nibble1; 
+        }
+
+        if (address >= 0x05000000 && address <= 0x050003FF)
+        {
+            obj_pallete[address - 0x05000000 + 3] = nibble4;
+            obj_pallete[address - 0x05000000 + 2] = nibble3;
+            obj_pallete[address - 0x05000000 + 1] = nibble2;
+            obj_pallete[address - 0x05000000] = nibble1; 
+        }
+        if (address >= 0x06000000 && address <= 0x06017FFF)
+        {
+            vram[address - 0x06000000 + 3] = nibble4;
+            vram[address - 0x06000000 + 2] = nibble3;
+            vram[address - 0x06000000 + 1] = nibble2;
+            vram[address - 0x06000000] = nibble1; 
+        }
+        if (address >= 0x07000000 && address <= 0x070003FF)
+        {
+            obj_attr[address - 0x07000000 + 3] = nibble4;
+            obj_attr[address - 0x07000000 + 2] = nibble3;
+            obj_attr[address - 0x07000000 + 1] = nibble2;
+            obj_attr[address - 0x07000000] = nibble1; 
+        }
+
+        if(address >= 0x08000000 && address <= 0x09FFFFFF)  
+        {
+            write("Written in ROM");
+        }
     }
 
     /++ Writes a 16bit number to memory +/

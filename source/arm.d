@@ -18,22 +18,33 @@ void undefined_instruction(CPU cpu) // I need to define structions in instructio
 /++ Handler for the Branch opcode +/
 void branch_handler(CPU cpu)
 {
-    uint32 debugg = cpu.mem.read32(cpu.pc);
-    bool opcode = (debugg >> 24) & 1;
+    uint32 opcode = cpu.mem.read32(cpu.pc);
+    bool b_opcode = (opcode >> 24) & 1;
     cpu.output.write(format("%X", cpu.mem.read32(cpu.pc)));
     cpu.output.write("b ");
     
-    debugg &= 0xffffff;
-    
+    opcode &= 0xffffff;
+    bool msb = (opcode >> 23) & 1;
+    for(int i = 24; i < 32; i++)
+    {
+        if(msb)
+        {
+            opcode |= 1UL << i;
+        }
+        else
+        {
+            opcode &= ~(1UL << i);
+        }
+    }
 
-    cpu.pc += (debugg << 2);
+    cpu.pc += (opcode << 2);
     cpu.pc += 8;
-    if(opcode)
+    if(b_opcode)
     {
         cpu.output.write("blt ");
         cpu.lr = cpu.pc + 4;
     }
-    cpu.output.write(format("%X", debugg));
+    cpu.output.write(format("%X", opcode));
     cpu.output.writeln("");
 }
 
@@ -65,7 +76,7 @@ void dataproc_handler(CPU cpu)
                 uint8 steps = (opcode >> 8) & 0b1111;
                 cpu.regs[dest_reg] += operand1 + ror(immediate, steps * 2);
                 cpu.output.write(' ');
-                cpu.output.writeln(format("%X", operand1 + ror(immediate, steps * 2)));
+                cpu.output.writeln(format("%X", operand1));
             }
             else
             {
@@ -338,7 +349,11 @@ void datatransfer_handler(CPU cpu)
         {
             case 1:
             {
-                cpu.output.write("strh ");
+                cpu.output.write("strh r");
+                cpu.output.write(dest_reg);
+                cpu.output.write(" [r");
+                cpu.output.write(base_reg);
+                cpu.output.write("] ");
                 uint32 addr = cpu.regs[base_reg];
                 if(pre_post)
                 {
