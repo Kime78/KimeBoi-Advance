@@ -5,15 +5,15 @@ import memory;
 import cpu;
 import bindbc.sdl;
 
-uint16[] pixels = new uint16[1000*480];
+uint16[] pixels = new uint16[1000 * 480];
 void update_screen(CPU cpu)
 {
     for(int i = 0; i < 240; i += 2)
     {
         for(int j = 0; j < 160; j += 2)
         {
-            pixels[i + 240 * j] = cpu.mem.read16(0x06000000 + 2*(i + j*240));
-            pixels[i + 240 * j + 1] = cpu.mem.read16(0x06000000 + 2*(i + j*240));
+            pixels[i + 240 * j] = cpu.mem.read16(0x06000000 + 2 * (i + j * 240));
+            pixels[i + 240 * j + 1] = cpu.mem.read16(0x06000000 + 2 * (i + j * 240));
             //pixels[i + 240 * j + 240] = cpu.mem.read16(0x06000000 + 2*(i + j*240));
             //pixels[i + 240 * j + 241] = cpu.mem.read16(0x06000000 + 2*(i + j*240));
             //pixels[i + 240 * j + 2] = cpu.mem.read16(0x06000000 + i + j * 240);

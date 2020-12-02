@@ -28,7 +28,8 @@ class LUT
 
             if((i >> 9) == 0b0101)
                 arm_table[i] = toDelegate(&branch_handler);
-                
+            if((i >> 10) == 0b01)
+                arm_table[i] = toDelegate(&single_transfer);    
         }
     }
     /++ Fills the THUMB LUT +/

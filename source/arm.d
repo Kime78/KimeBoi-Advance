@@ -11,6 +11,7 @@ void undefined_instruction(CPU cpu) // I need to define structions in instructio
     //uint32 opcode = get_arm_opcode(mem.read32(pc));
     //output.output.writeln(opcode);
     cpu.output.writeln("Unhandled Behaviour!");
+    cpu.output.writeln(format("%X", cpu.mem.read32(cpu.pc)));
     import core.stdc.stdlib;
     exit(0);
 }
@@ -74,7 +75,7 @@ void dataproc_handler(CPU cpu)
             {
                 uint8 immediate = opcode & 0b1111_1111;
                 uint8 steps = (opcode >> 8) & 0b1111;
-                cpu.regs[dest_reg] += operand1 + ror(immediate, steps * 2);
+                cpu.regs[dest_reg] = cpu.regs[operand1] + ror(immediate, steps * 2);
                 cpu.output.write(' ');
                 cpu.output.writeln(format("%X", operand1));
             }
@@ -99,7 +100,7 @@ void dataproc_handler(CPU cpu)
                         cpu.output.write(" lsl ");
                         cpu.output.write(format("%X", shift_amount));
                         cpu.output.write(" ");
-                        cpu.regs[dest_reg] += operand2 << shift_amount;
+                        cpu.regs[dest_reg] = cpu.regs[operand1] + cpu.regs[operand2] << shift_amount;
                         break;
                     }
                     case 1: //lsr
@@ -252,6 +253,11 @@ void dataproc_handler(CPU cpu)
                 cpu.regs[register_id] = ror(operand2, steps * 2);
                 cpu.output.write(' ');
                 cpu.output.writeln(format("%X", ror(operand2, steps * 2)));
+
+                cpu.output.write(operand2);
+                cpu.output.write(" ");
+                cpu.output.write(steps);
+                cpu.output.write(" ");
             }
             else
             {
@@ -401,5 +407,111 @@ void datatransfer_handler(CPU cpu)
         writeln("undefined behavior: data transfer2");
     }    
 
+    cpu.pc += 4;
+}
+
+void single_transfer(CPU cpu)
+{
+    import arithmetics;
+
+    uint32 opcode = cpu.mem.read32(cpu.pc);
+    bool immediate = (opcode >> 25) & 1;
+    bool pre_post = (opcode >> 24) & 1;
+    bool up_down = (opcode >> 23) & 1;
+    bool byte_word = (opcode >> 22) & 1; 
+    bool mem_write_back = (opcode >> 21) & 1;
+    bool load_store = (opcode >> 20) & 1;
+    uint8 base_reg = (opcode >> 16) & 0b1111;
+    uint8 dest_reg = (opcode >> 12) & 0b1111;
+
+    if(load_store == 0)
+    {
+        cpu.output.write("str ");
+        uint32 offset;
+        if(immediate)
+        {
+            offset = opcode & 0b1111_1111_1111;
+        }
+        else 
+        {
+            uint8 off_reg = opcode & 0b1111;
+            uint8 shift_type = opcode & 0b11;
+            uint8 shift_amount = opcode & 0b1_1111;
+            switch (shift_type)
+            {
+                case 0: //lsl
+                {
+                    cpu.output.write(" lsl ");
+                    cpu.output.write(format("%X", shift_amount));
+                    cpu.output.write(" ");
+                    offset = cpu.regs[off_reg] << shift_amount;
+                    break;
+                }
+                case 1: //lsr
+                {
+                    cpu.output.write(" lsr ");
+                    offset = cpu.regs[off_reg] >> shift_amount;
+                    break;
+                }
+                case 2: //asr
+                {
+                    cpu.output.write(" asr! ");
+                    break;
+                }
+                case 3: //ror
+                {
+                    cpu.output.write(" ror ");
+                    offset = ror(cpu.regs[off_reg], shift_amount);
+                    break;
+                }
+                default:
+                {
+                    //crash
+                    cpu.output.write("ita");
+                    break;
+                }
+            }
+        }
+        cpu.output.write(format("%X", offset));
+        cpu.output.write(" [r");
+        cpu.output.write(base_reg);
+        cpu.output.write("] r");
+        cpu.output.write(dest_reg);
+        cpu.output.write(" ");
+        uint32 addr = cpu.regs[base_reg];
+        if(pre_post)
+        {
+            if(up_down)
+            {
+                addr += offset; 
+            }
+            else
+            {
+                addr -= offset;
+            }
+
+            cpu.mem.write32(addr, cpu.regs[dest_reg]);
+
+            if(mem_write_back)
+            {
+                cpu.regs[base_reg] = addr;
+            }
+        }
+        else 
+        {
+            cpu.mem.write32(addr, cpu.regs[dest_reg]);
+
+            if(up_down)
+            {
+                addr += offset; 
+            }
+            else
+            {
+                addr -= offset;
+            }
+
+            cpu.regs[base_reg] = addr;
+        }
+    }
     cpu.pc += 4;
 }

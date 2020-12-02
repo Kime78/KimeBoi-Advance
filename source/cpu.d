@@ -9,7 +9,7 @@ import opcodes;
 /++++ The ARM7 CPU +/
 class CPU
 {
-    uint32[12] regs; /++ CPU registers +/
+    uint32[16] regs; /++ CPU registers +/
     uint32 sp; /++ stack pointer of the CPU +/
     uint32 lr; /++ link register +/
     uint32 pc; /++ program counter +/
@@ -18,18 +18,28 @@ class CPU
     File output; /++ outputs of the cpu +/
     LUT lut; /++ Look Up Table+/
     
-
-    /++ Modifies The Zero conditonal flag +/
-    void flag_zero(bool bit) 
+    /++ Returns the signed flag ++/
+    bool get_signed_flag()
     {
-        if(bit)
-        {
-            cpsr |= 1UL << 30;
-        }
-        else
-        {
-            cpsr &= ~(1UL << 30);
-        }
+        return (cpsr >> 31) & 1;
+    }
+
+    /++ Returns the zero flag ++/
+    bool get_zero_flag()
+    {
+        return (cpsr >> 30) & 1;
+    }
+
+    /++ Returns the carry flag ++/
+    bool get_carry_flag()
+    {
+        return (cpsr >> 29) & 1;
+    }
+
+    /++ Returns the overflow flag ++/
+    bool get_overflow_flag()
+    {
+        return (cpsr >> 28) & 1;
     }
 
     /++ Modifies The Signed Overflow flag +/
@@ -45,16 +55,16 @@ class CPU
         }
     } 
 
-    /++ Modifies The Overflow flag +/
-    void flag_overflow(bool bit)
+    /++ Modifies The Zero conditonal flag +/
+    void flag_zero(bool bit) 
     {
         if(bit)
         {
-            cpsr |= 1UL << 28;
+            cpsr |= 1UL << 30;
         }
         else
         {
-            cpsr &= ~(1UL << 28);
+            cpsr &= ~(1UL << 30);
         }
     }
 
@@ -70,6 +80,20 @@ class CPU
             cpsr &= ~(1UL << 29);
         }
     }
+
+    /++ Modifies The Overflow flag +/
+    void flag_overflow(bool bit)
+    {
+        if(bit)
+        {
+            cpsr |= 1UL << 28;
+        }
+        else
+        {
+            cpsr &= ~(1UL << 28);
+        }
+    }
+
 
     /++ Initialises the CPU  +/
     this()
@@ -89,8 +113,110 @@ class CPU
         output.writeln("");
         output.write("PC = "); output.writeln(format("%X", pc));
         output.write("Instruction: "); output.writeln(format("%X", opcode));
+        output.write("Cond: "); output.writeln((mem.read32(pc) >> 28) & 0b1111);
 
-        lut.arm_table[opcode](this);
+        bool cond = 0;
+        switch (mem.read32(pc) >> 28 & 0b1111)
+        {
+            case 0x0:
+            {
+                cond = get_zero_flag() == 1;
+                break;
+            }
+            
+            case 0x1:
+            {
+                cond = get_zero_flag() == 0;
+                break;
+            }
+
+            case 0x2:
+            {
+                cond = get_carry_flag() == 1;
+                break;
+            }
+
+            case 0x3:
+            {
+                cond = get_carry_flag() == 0;
+                break;
+            }
+
+            case 0x4:
+            {
+                cond = get_signed_flag() == 1;
+                break;
+            }
+
+            case 0x5:
+            {
+                cond = get_signed_flag() == 0;
+                break;
+            }
+
+            case 0x6:
+            {
+                cond = get_overflow_flag() == 1;
+                break;
+            }
+
+            case 0x7:
+            {
+                cond = get_overflow_flag() == 0;
+                break;
+            }
+
+            case 0x8:
+            {
+                cond = (get_carry_flag() == 1) && (get_zero_flag() == 0);
+                break;
+            }
+
+            case 0x9:
+            {
+                cond = (get_carry_flag() == 0) || (get_zero_flag() == 1);
+                break;
+            }
+
+            case 0xA:
+            {
+                cond = get_signed_flag() == get_overflow_flag();
+                break;
+            }
+
+            case 0xB:
+            {
+                cond = get_signed_flag() != get_overflow_flag();    
+                break;
+            }
+
+            case 0xC:
+            {
+                cond = (get_zero_flag() == 0) && (get_signed_flag() == get_overflow_flag());
+                break;
+            }
+
+            case 0xD:
+            {
+                cond = (get_zero_flag() == 1) && (get_signed_flag() != get_overflow_flag());
+                break;
+            }
+            
+            case 0xE:
+            {
+                cond = 1;
+                break;
+            }
+
+            default:
+            {
+                write("UNHANDLED COND ");
+                writeln(mem.read32(pc) >> 28 & 0b1111);
+                break;
+            }
+        }
+        if(cond)
+            lut.arm_table[opcode](this);
         for(int i = 0; i < 12; i++)
         {
             output.write("R");
@@ -102,6 +228,10 @@ class CPU
         output.write("CPRS: ");
         output.write(format("%X", cpsr));
         output.writeln("");
+
+        sp = regs[13];
+        lr = regs[14];
+        regs[15] = pc;
         return 0;
     }
 
