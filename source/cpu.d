@@ -186,6 +186,8 @@ class CPU
 
             case 0xB:
             {
+                bool a = get_signed_flag();
+                bool b = get_overflow_flag();
                 cond = get_signed_flag() != get_overflow_flag();    
                 break;
             }
@@ -217,6 +219,12 @@ class CPU
         }
         if(cond)
             lut.arm_table[opcode](this);
+        else 
+        {
+            write('a');
+            pc += 4;
+        }
+            
         for(int i = 0; i < 12; i++)
         {
             output.write("R");

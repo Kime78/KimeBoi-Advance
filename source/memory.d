@@ -33,7 +33,7 @@ class Memory
         io = new uint8[0x3FE];
 
         obj_pallete = new uint8[1024];
-        vram = new uint8[98_304];
+        vram = new uint8[98_314];
         obj_attr = new uint8[1024];
 
         rom = new uint8[33_554_432];

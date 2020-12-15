@@ -81,7 +81,7 @@ void dataproc_handler(CPU cpu)
             }
             else
             {
-                const uint8 shift_type = (opcode >> 4) & 0b11;
+                const uint8 shift_type = (opcode >> 5) & 0b11;
                 uint8 shift_amount;
                 if(((opcode >> 4) & 1) == 1)
                 {
@@ -132,38 +132,40 @@ void dataproc_handler(CPU cpu)
             break;
         }
 
-        case 0xA:
+        case 0x8:
         {
             import arithmetics;
             
             //writeln(mem.read32(pc));
-            cpu.output.write("cmpr r");
+            cpu.output.write("tst r");
             //uint16 operand = opcode & 0b111_1111_1111;
             uint8 dest_reg = (opcode >> 12) & 0b1111;
             cpu.output.write(dest_reg);
     
             uint8 operand1 = (opcode >> 16) & 0b1111;
-            cpu.output.write(" r");
-            cpu.output.write(operand1);
+            //cpu.output.write(" r");
+            //cpu.output.write(operand1);
             const bool immediate_mode = (opcode >> 25) & 1;
             if(immediate_mode)
             {
+                import core.checkedint;
+                
                 uint8 immediate = opcode & 0b1111_1111;
                 uint8 steps = (opcode >> 8) & 0b1111;
 
-                uint32 aux = cpu.regs[dest_reg] - operand1 + ror(immediate, steps * 2);
+                uint32 aux = cpu.regs[operand1] & ror(immediate, steps * 2);
+
                 //set flags here UwU
                 cpu.flag_zero(aux == 0);
-                cpu.flag_overflow(cpu.regs[dest_reg] - operand1 + ror(immediate, steps * 2) > 0);
                 cpu.flag_signed(aux >> 31);
-                cpu.flag_carry(cpu.regs[dest_reg] - operand1 + ror(immediate, steps * 2) > 0x80000000);
+                cpu.flag_carry(0); //?
 
                 cpu.output.write(' ');
-                cpu.output.writeln(format("%X", operand1 + ror(immediate, steps * 2)));
+                cpu.output.writeln(format("%X", cpu.regs[operand1] & ror(immediate, steps * 2)));
             }
             else
             {
-                const uint8 shift_type = (opcode >> 4) & 0b11;
+                const uint8 shift_type = (opcode >> 5) & 0b11;
                 uint8 shift_amount;
                 if(((opcode >> 4) & 1) == 1)
                 {
@@ -175,34 +177,38 @@ void dataproc_handler(CPU cpu)
                     shift_amount = (opcode >> 7) & 0b1_1111;
                 }
                 const uint8 operand2 = opcode & 0b1111;
+                cpu.output.write(" r");
+                cpu.output.write(operand2);
                 switch (shift_type)
                 {
                     case 0: //lsl
-                    {
-                        cpu.output.write(" lsl ");
-                        cpu.output.write(format("%X", shift_amount));
-                        cpu.output.write(" ");
-
-                        uint32 aux = cpu.regs[dest_reg] - operand2 << shift_amount;
+                    {   
+                        import core.checkedint;
+                        
+                        uint32 aux = cpu.regs[operand1] & cpu.regs[operand2] << shift_amount;
+                       
                         //set flags UwU
                         cpu.flag_zero(aux == 0);
-                        cpu.flag_overflow(cpu.regs[dest_reg] - operand2 << shift_amount > 0);
                         cpu.flag_signed(aux >> 31);
-                        cpu.flag_carry(cpu.regs[dest_reg] - operand2 << shift_amount > 0x80000000);
+                        cpu.flag_carry(0); //?
 
+                        cpu.output.write(" lsl ");
+                        cpu.output.write(format("%X", aux));
+                        cpu.output.write(" ");
 
                         break;
                     }
                     case 1: //lsr
                     {
+                        import core.checkedint;
+
                         cpu.output.write("lsr");
 
-                        uint32 aux = cpu.regs[dest_reg] - operand2 >> shift_amount;
+                        uint32 aux = cpu.regs[operand1] & cpu.regs[operand2] >> shift_amount;
                         //set flags UwU
                         cpu.flag_zero(aux == 0);
-                        cpu.flag_overflow(cpu.regs[dest_reg] - operand2 >> shift_amount > 0);
                         cpu.flag_signed(aux >> 31);
-                        cpu.flag_carry(cpu.regs[dest_reg] - operand2 >> shift_amount > 0x80000000);
+                        cpu.flag_carry(0); //?
                         break;
                     }
                     case 2: //asr
@@ -212,14 +218,163 @@ void dataproc_handler(CPU cpu)
                     }
                     case 3: //ror
                     {
+                        import core.checkedint;
+
                         cpu.output.write("ror");
 
-                        uint32 aux = cpu.regs[dest_reg] - ror(operand2, shift_amount);
+                        uint32 aux = cpu.regs[operand1] & ror(cpu.regs[operand2], shift_amount);
+                        
                         //set flags UwU
                         cpu.flag_zero(aux == 0);
-                        cpu.flag_overflow(cpu.regs[dest_reg] - ror(operand2, shift_amount) > 0);
                         cpu.flag_signed(aux >> 31);
-                        cpu.flag_carry(cpu.regs[dest_reg] - ror(operand2, shift_amount) > 0x80000000);
+                        cpu.flag_carry(0);
+                        break;
+                    }
+                    default:
+                    {
+                        //crash
+                        cpu.output.write("ita");
+                        break;
+                    }
+                }
+            }
+            cpu.pc += 4;
+            break;
+        }
+
+        case 0xA:
+        {
+            import arithmetics;
+            
+            //writeln(mem.read32(pc));
+            cpu.output.write("cmmpr r");
+            //uint16 operand = opcode & 0b111_1111_1111;
+            uint8 dest_reg = (opcode >> 12) & 0b1111;
+            cpu.output.write(dest_reg);
+    
+            uint8 operand1 = (opcode >> 16) & 0b1111;
+            //cpu.output.write(" r");
+            //cpu.output.write(operand1);
+            const bool immediate_mode = (opcode >> 25) & 1;
+            if(immediate_mode)
+            {
+                import core.checkedint;
+                
+
+                uint8 immediate = opcode & 0b1111_1111;
+                uint8 steps = (opcode >> 8) & 0b1111;
+
+                uint32 aux = cpu.regs[operand1] - ror(immediate, steps * 2);
+
+                //set flags here UwU
+                cpu.flag_zero(aux == 0);
+                bool correct_overflow;
+                bool correct_carry;
+                uint32 a = cpu.regs[operand1];
+                uint32 b = ror(immediate, steps * 2);
+                
+                subs(a, b, correct_overflow);
+                subu(a, b, correct_carry);
+
+                cpu.flag_zero(aux == 0);
+                cpu.flag_overflow(correct_overflow);
+                cpu.flag_signed(aux >> 31);
+                cpu.flag_carry(correct_carry);
+
+                cpu.output.write(' ');
+                cpu.output.writeln(format("%X", cpu.regs[operand1] - ror(immediate, steps * 2)));
+            }
+            else
+            {
+                const uint8 shift_type = (opcode >> 5) & 0b11;
+                uint8 shift_amount;
+                if(((opcode >> 4) & 1) == 1)
+                {
+                    uint8 id = ((opcode >> 8) & 0b1111);
+                    //shift_amount = regs[id];
+                }
+                else
+                {
+                    shift_amount = (opcode >> 7) & 0b1_1111;
+                }
+                const uint8 operand2 = opcode & 0b1111;
+                cpu.output.write(" r");
+                cpu.output.write(operand2);
+                switch (shift_type)
+                {
+                    case 0: //lsl
+                    {   
+                        import core.checkedint;
+                        
+                        bool correct_overflow;
+                        bool correct_carry;
+                        uint32 a = cpu.regs[operand1];
+                        uint32 b = cpu.regs[operand2] << shift_amount;
+
+                        subs(a, b, correct_overflow);
+                        subu(a, b, correct_carry);
+
+                        uint32 aux = cpu.regs[operand1] - cpu.regs[operand2] << shift_amount;
+                       
+                        //set flags UwU
+                        cpu.flag_zero(aux == 0);
+                        cpu.flag_overflow(correct_overflow);
+                        cpu.flag_signed(aux >> 31);
+                        cpu.flag_carry(correct_carry);
+
+                        cpu.output.write(" lsl ");
+                        cpu.output.write(format("%X", aux));
+                        cpu.output.write(" ");
+
+                        break;
+                    }
+                    case 1: //lsr
+                    {
+                        import core.checkedint;
+                        
+                        bool correct_overflow;
+                        bool correct_carry;
+
+                        cpu.output.write("lsr");
+                        uint32 a = cpu.regs[operand1];
+                        uint32 b = cpu.regs[operand2] >> shift_amount;
+
+                        subu(a, b, correct_overflow);
+                        subs(a, b, correct_carry);
+                        uint32 aux = cpu.regs[operand1] - cpu.regs[operand2] >> shift_amount;
+                        //set flags UwU
+                        cpu.flag_zero(aux == 0);
+                        cpu.flag_overflow(correct_overflow);
+                        cpu.flag_signed(aux >> 31);
+                        cpu.flag_carry(correct_carry);
+                        break;
+                    }
+                    case 2: //asr
+                    {
+                        cpu.output.write("asr");
+                        break;
+                    }
+                    case 3: //ror
+                    {
+                        import core.checkedint;
+                        
+                        bool correct_overflow;
+                        bool correct_carry;
+
+                        cpu.output.write("ror");
+
+                        uint32 a = cpu.regs[operand1];
+                        uint32 b = ror(cpu.regs[operand2], shift_amount);
+                        subu(a, b, correct_overflow);
+                        subs(a, b, correct_carry);
+
+                        uint32 aux = cpu.regs[operand1] - ror(cpu.regs[operand2], shift_amount);
+                        
+                        //set flags UwU
+                        cpu.flag_zero(aux == 0);
+                        cpu.flag_overflow(correct_overflow);
+                        cpu.flag_signed(aux >> 31);
+                        cpu.flag_carry(correct_carry);
                         break;
                     }
                     default:
@@ -261,7 +416,7 @@ void dataproc_handler(CPU cpu)
             }
             else
             {
-                const uint8 shift_type = (opcode >> 4) & 0b11;
+                const uint8 shift_type = (opcode >> 5) & 0b11;
                 uint8 shift_amount;
                 if(((opcode >> 4) & 1) == 1)
                 {
@@ -330,9 +485,10 @@ void datatransfer_handler(CPU cpu)
     bool pre_post = (opcode >> 24) & 1;
     bool up_down = (opcode >> 23) & 1;
     bool immediate_flag = (opcode >> 22) & 1;
-    bool write_back = 1;
-    if(pre_post == 1 && (((opcode) >> 21) & 1) == 1)
-        write_back = 0;
+    // bool write_back = 1;
+    // if(pre_post == 1 && (((opcode) >> 21) & 1) == 1)
+    //     write_back = 0;
+    bool write_back = (opcode >> 21) & 1;
     bool load_store = (opcode >> 20) & 1;
     uint8 base_reg = (opcode >> 16) & 0b1111;
     uint8 dest_reg = (opcode >> 12) & 0b1111;
@@ -404,7 +560,60 @@ void datatransfer_handler(CPU cpu)
     }
     else
     {
-        writeln("undefined behavior: data transfer2");
+        switch (instr)
+        {
+            case 1:
+            {
+                //writeln(cpu.mem.read32(cpu.pc));
+                cpu.output.write("ldrh r");
+                cpu.output.write(dest_reg);
+                cpu.output.write(" [r");
+                cpu.output.write(base_reg);
+                cpu.output.write("] ");
+
+                uint32 addr = cpu.regs[base_reg];
+                if(pre_post)
+                {
+                    if(up_down)
+                    {
+                        addr += offset;
+                    }
+                    else
+                    {
+                        addr -= offset;
+                    }
+
+                    //cpu.mem.write32(addr, cpu.regs[dest_reg]);
+                    cpu.regs[dest_reg] = cpu.mem.read32(addr); //err
+                    if(write_back)
+                    {
+                        cpu.regs[base_reg] = addr;
+                    }
+                }
+                else
+                {
+                    //cpu.mem.write32(addr, cpu.regs[dest_reg]);
+                    cpu.regs[dest_reg] = cpu.mem.read32(addr);
+                    if(up_down)
+                    {
+                        addr += offset;
+                    }
+                    else
+                    {
+                        addr -= offset;
+                    }
+
+                    cpu.regs[base_reg] = addr;
+                }
+
+                break;
+            }
+            default:
+            {
+                write("unhandled shit");
+                break;
+            }
+        }
     }    
 
     cpu.pc += 4;
@@ -435,16 +644,20 @@ void single_transfer(CPU cpu)
         else 
         {
             uint8 off_reg = opcode & 0b1111;
-            uint8 shift_type = opcode & 0b11;
-            uint8 shift_amount = opcode & 0b1_1111;
+            uint8 shift_type = (opcode >> 5) & 0b11;
+            uint8 shift_amount = (opcode >> 7) & 0b1_1111;
             switch (shift_type)
             {
                 case 0: //lsl
                 {
+                    offset = cpu.regs[off_reg] << shift_amount;
+                    if(shift_amount == 0)
+                    {
+                        offset = off_reg;
+                    }
                     cpu.output.write(" lsl ");
                     cpu.output.write(format("%X", shift_amount));
                     cpu.output.write(" ");
-                    offset = cpu.regs[off_reg] << shift_amount;
                     break;
                 }
                 case 1: //lsr
