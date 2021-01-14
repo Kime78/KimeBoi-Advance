@@ -47,6 +47,7 @@ draw_loop:
     add r2, r2, #2 ; increment color pointer
 
     cmp r1, #5 ; stop after 5 iterations
+    
     bne draw_loop
 
     b main_loop

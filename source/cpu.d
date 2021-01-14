@@ -109,6 +109,8 @@ class CPU
     /++ Emulates a single CPU cycle, returns the number of cycles taken +/
     int emulate_cycle()
     {
+        mem.write16(0x4000004, 3); //fake vblank
+
         uint32 opcode = get_arm_opcode(mem.read32(pc));
         output.writeln("");
         output.write("PC = "); output.writeln(format("%X", pc));
@@ -186,8 +188,6 @@ class CPU
 
             case 0xB:
             {
-                bool a = get_signed_flag();
-                bool b = get_overflow_flag();
                 cond = get_signed_flag() != get_overflow_flag();    
                 break;
             }
@@ -221,7 +221,6 @@ class CPU
             lut.arm_table[opcode](this);
         else 
         {
-            write('a');
             pc += 4;
         }
             

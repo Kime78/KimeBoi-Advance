@@ -21,11 +21,13 @@ class LUT
                 arm_table[i] = toDelegate(&dataproc_handler);
             }
 
-            if((((i >> 0) & 1) == 1) && (((i >> 3) & 1) == 1))
+            if(((((i >> 0) & 1) == 1) && (((i >> 3) & 1) == 1)) && (i >> 9) == 0b0000)
             {
                 arm_table[i] = toDelegate(&datatransfer_handler);
             }
 
+            if((i >> 9) == 0b0100) //this can be very buggy 
+                arm_table[i] = toDelegate(&block_transfer);
             if((i >> 9) == 0b0101)
                 arm_table[i] = toDelegate(&branch_handler);
             if((i >> 10) == 0b01)

@@ -20,32 +20,33 @@ void undefined_instruction(CPU cpu) // I need to define structions in instructio
 void branch_handler(CPU cpu)
 {
     uint32 opcode = cpu.mem.read32(cpu.pc);
+    uint32 addr = opcode & 0b1111_1111_1111_1111_1111_1111;
     bool b_opcode = (opcode >> 24) & 1;
     cpu.output.write(format("%X", cpu.mem.read32(cpu.pc)));
-    cpu.output.write("b ");
+    cpu.output.write(" b ");
     
-    opcode &= 0xffffff;
-    bool msb = (opcode >> 23) & 1;
+    //opcode &= 0xffffff;
+    bool msb = (addr >> 23) & 1;
     for(int i = 24; i < 32; i++)
     {
         if(msb)
         {
-            opcode |= 1UL << i;
+            addr |= 1UL << i;
         }
         else
         {
-            opcode &= ~(1UL << i);
+            addr &= ~(1UL << i);
         }
     }
 
-    cpu.pc += (opcode << 2);
+    cpu.pc += (addr << 2);
     cpu.pc += 8;
     if(b_opcode)
     {
         cpu.output.write("blt ");
         cpu.lr = cpu.pc + 4;
     }
-    cpu.output.write(format("%X", opcode));
+    cpu.output.write(format("%X", addr));
     cpu.output.writeln("");
 }
 
@@ -509,6 +510,11 @@ void datatransfer_handler(CPU cpu)
     {
         switch(instr)
         {
+            case 0:
+            {
+                writeln("reserved!!");
+                break;
+            }
             case 1:
             {
                 cpu.output.write("strh r");
@@ -553,15 +559,22 @@ void datatransfer_handler(CPU cpu)
             }
             default:
             {
-                writeln(instr);
+                writeln("unhandled store");
                 break;
             }
         }
     }
     else
     {
+
         switch (instr)
         {
+            case 0:
+            {
+                write("reserved!! ");
+                writeln(cpu.mem.read32(cpu.pc));
+                break;
+            }
             case 1:
             {
                 //writeln(cpu.mem.read32(cpu.pc));
@@ -584,6 +597,7 @@ void datatransfer_handler(CPU cpu)
                     }
 
                     //cpu.mem.write32(addr, cpu.regs[dest_reg]);
+                    cpu.output.writeln(cpu.mem.read32(addr));
                     cpu.regs[dest_reg] = cpu.mem.read32(addr); //err
                     if(write_back)
                     {
@@ -610,7 +624,7 @@ void datatransfer_handler(CPU cpu)
             }
             default:
             {
-                write("unhandled shit");
+                writeln("unhandled load");
                 break;
             }
         }
@@ -726,5 +740,154 @@ void single_transfer(CPU cpu)
             cpu.regs[base_reg] = addr;
         }
     }
+    cpu.pc += 4;
+}
+
+/++ Handler for Block Data Transfer Opcodes +/
+void block_transfer(CPU cpu)
+{
+    uint32 opcode = cpu.mem.read32(cpu.pc);
+  
+    bool pre_post = (opcode >> 24) & 1;
+    bool up_down = (opcode >> 23) & 1;
+    bool byte_word = (opcode >> 22) & 1; 
+    bool mem_write_back = (opcode >> 21) & 1;
+    bool load_store = (opcode >> 20) & 1;
+    uint8 base_reg = (opcode >> 16) & 0b1111;
+    uint16 reg_list = opcode & 0b1111_1111_1111_1111;
+
+    uint32 offset;
+    uint32 addr = cpu.regs[base_reg];
+
+    if(load_store == 0)
+    {
+        cpu.output.writeln("stm r");
+        cpu.output.write(base_reg);
+        cpu.output.write(" ");
+        cpu.output.writeln(reg_list);
+
+        if(pre_post)
+        {
+            if(up_down)
+            {
+                for(int i = 0; i < 16; i++)
+                {
+                    if((reg_list >> i) & 1)
+                    {
+                        //cpu.regs[i] = cpu.mem.read32(addr + offset);
+                        cpu.mem.write32(addr + offset, cpu.regs[i]);
+                        offset += 4;
+                    }
+                }
+            }
+
+            else
+            {
+                for(int i = 0; i < 16; i++)
+                {
+                    if((reg_list >> i) & 1)
+                    {
+                        //cpu.regs[i] = cpu.mem.read32(addr - offset);
+                        cpu.mem.write32(addr - offset, cpu.regs[i]);
+                        offset += 4;
+                    }
+                }
+            }
+
+            if(mem_write_back)
+            {
+                cpu.regs[base_reg] = addr + offset;
+            }
+        }
+        else 
+        {
+            //cpu.mem.write32(addr, cpu.regs[dest_reg]);
+
+            for(int i = 0; i < 16; i++)
+            {
+                if((reg_list >> i) & 1)
+                {
+                    //cpu.regs[i] = cpu.mem.read32(addr);
+                    cpu.mem.write32(addr, cpu.regs[i]);
+                    if(up_down)
+                    {
+                        addr += offset; 
+                    }
+                    else
+                    {
+                        addr -= offset;
+                    }
+
+                    offset += 4;
+                }
+            }
+
+            cpu.regs[base_reg] = addr + offset;
+        }
+    }
+    else
+    {
+        cpu.output.write("ldm r");
+        cpu.output.write(base_reg);
+        cpu.output.write(" ");
+        cpu.output.writeln(reg_list);
+
+        if(pre_post)
+        {
+            if(up_down)
+            {
+                for(int i = 0; i < 16; i++)
+                {
+                    if((reg_list >> i) & 1)
+                    {
+                        cpu.regs[i] = cpu.mem.read32(addr + offset);
+                        offset += 4;
+                    }
+                }
+            }
+
+            else
+            {
+                for(int i = 0; i < 16; i++)
+                {
+                    if((reg_list >> i) & 1)
+                    {
+                        cpu.regs[i] = cpu.mem.read32(addr - offset);
+                        offset += 4;
+                    }
+                }
+            }
+
+            if(mem_write_back)
+            {
+                cpu.regs[base_reg] = addr + offset;
+            }
+        }
+        else 
+        {
+            //cpu.mem.write32(addr, cpu.regs[dest_reg]);
+
+            for(int i = 0; i < 16; i++)
+            {
+                if((reg_list >> i) & 1)
+                {
+                    cpu.regs[i] = cpu.mem.read32(addr);
+                    if(up_down)
+                    {
+                        addr += offset; 
+                    }
+                    else
+                    {
+                        addr -= offset;
+                    }
+
+                    offset += 4;
+                }
+            }
+
+            cpu.regs[base_reg] = addr + offset;
+        }
+    }
+    
     cpu.pc += 4;
 }
